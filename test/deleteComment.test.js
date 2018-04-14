@@ -54,4 +54,49 @@ describe('ROUTES', () => {
       expect(res.body.success).to.be.true;
     });
   });
+
+  describe('DELETE /posts/:id', () => {
+    it('should delete the post with the given id', async () => {
+      const postOne = new Post({ title: 'Ayo wassssup', text: 'This is fun.' });
+      let postTwo = new Post({
+        title: 'I love coding',
+        text: "Ya. It's hard as shit but rewarding."
+      });
+
+      const commentOne = new Comment({ text: 'Hey there buddy' });
+      const commentTwo = new Comment({ text: 'How you doing' });
+
+      commentOne._parent = postTwo;
+      commentTwo._parent = postTwo;
+
+      await Promise.all([postOne.save(), postTwo.save()]);
+
+      const commentRoute = `/posts/${postTwo._id}/comments`;
+      const route = `/posts/${postTwo._id}`;
+
+      // post commentOne
+      await chai
+        .request(server)
+        .post(commentRoute)
+        .send(commentOne);
+
+      // post commentTwo
+      await chai
+        .request(server)
+        .post(commentRoute)
+        .send(commentTwo);
+
+      const res = await chai.request(server).delete(route);
+
+      const deletedPost = await Post.findById(postTwo._id);
+
+      const deletedComments = await Comment.find({});
+
+      expect(res).to.have.status(code.ACCEPTED);
+      expect(res.body).to.be.a('object');
+      expect(deletedComments).to.have.length(0);
+      expect(deletedPost).to.be.null;
+      expect(res.body.success).to.be.true;
+    });
+  });
 });

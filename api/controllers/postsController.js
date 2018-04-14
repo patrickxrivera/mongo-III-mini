@@ -75,9 +75,7 @@ const addComment = async (req, res) => {
 // to the comment we just deleted
 const removeComment = R.curry(({ _id }, c) => !_id.equals(c));
 
-const deleteComment = async (req, res) => {
-  const { commentId, id } = req.params;
-
+const deleteComment = async ({ params: { commentId, id } }, res) => {
   const comment = await Comment.findByIdAndRemove(commentId);
 
   const post = await Post.findById(id);
@@ -91,7 +89,18 @@ const deleteComment = async (req, res) => {
 // Similarly, in this function we need to delete the post document,
 // along with any comments that are the children of this post
 // We don't want any orphaned children in our database
-const deletePost = (req, res) => {};
+const purgeComment = (commentId) => Comment.remove({ _id: commentId });
+
+const deletePost = async ({ params: { id } }, res) => {
+  const post = await Post.findById(id);
+
+  await Promise.all(R.map(purgeComment, post.comments));
+  const test = await Comment.find({});
+
+  await Post.remove({ _id: id });
+
+  res.status(code.ACCEPTED).send({ success: true });
+};
 
 module.exports = {
   createPost,
