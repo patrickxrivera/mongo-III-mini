@@ -14,7 +14,7 @@ describe('ROUTES', () => {
     it('should create a new comment', async () => {
       const sampleRes = { text: "I'm a troll mwahahaha" };
 
-      const postOne = new Post({
+      let postOne = new Post({
         title: 'JS is awesome',
         text: 'I know right'
       });
@@ -28,17 +28,21 @@ describe('ROUTES', () => {
 
       await Promise.all([postOne.save(), postTwo.save()]);
 
-      const route = `/posts/${postTwo._id}/comments`;
+      const route = `/posts/${postOne._id}/comments`;
 
       const res = await chai
         .request(server)
         .post(route)
         .send(comment);
 
+      postOne = await Post.findById(postOne._id);
+
       expect(res).to.have.status(code.CREATED);
       expect(res.body).to.be.a('object');
       expect(res.body.text).to.be.a('string');
       expect(res.body._parent.title).to.equal(postOne.title);
+      expect(postOne.comments).to.have.length(1);
+      expect(postOne.comments[0]).to.eql(comment._id);
     });
 
     it('should return an error if the comment is invalid', async () => {
@@ -66,7 +70,7 @@ describe('ROUTES', () => {
       expect(res).to.have.status(code.USER_ERROR);
       expect(res.body).to.be.a('object');
       expect(res.body.error).to.equal(
-        'Sorry, you can\'t leave a blank comment.'
+        "Sorry, you can't leave a blank comment."
       );
     });
   });

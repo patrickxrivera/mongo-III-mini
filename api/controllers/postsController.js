@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const R = require('ramda');
 
 const to = require('../utils/to');
 const code = require('../utils/statusCodes');
@@ -57,9 +58,14 @@ const addComment = async (req, res) => {
     return;
   }
 
-  const result = await Comment.findOne({ _id: comment._id }).populate(
-    '_parent'
-  );
+  const result = await Comment.findById(comment._id).populate('_parent');
+
+  // Add comment to parent
+  const postId = result._parent._id;
+  const post = await Post.findById(postId);
+  post.comments = [...post.comments, comment];
+
+  await post.save();
 
   res.status(code.CREATED).send(result);
 };
@@ -67,7 +73,20 @@ const addComment = async (req, res) => {
 // In this function, we need to delete the comment document
 // We also need to delete the comment's parent post's reference
 // to the comment we just deleted
-const deleteComment = (req, res) => {};
+const removeComment = R.curry(({ _id }, c) => !_id.equals(c));
+
+const deleteComment = async (req, res) => {
+  const { commentId, id } = req.params;
+
+  const comment = await Comment.findByIdAndRemove(commentId);
+
+  const post = await Post.findById(id);
+  post.comments = R.filter(removeComment(comment), post.comments);
+
+  await post.save();
+
+  res.status(code.ACCEPTED).send({ success: true });
+};
 
 // Similarly, in this function we need to delete the post document,
 // along with any comments that are the children of this post
