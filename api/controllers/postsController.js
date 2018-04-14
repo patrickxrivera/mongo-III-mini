@@ -20,13 +20,49 @@ const createPost = async (req, res) => {
     .send({ error: 'You must include both a title and text.' });
 };
 
-const listPosts = (req, res) => {
-  res.send({ hi: 'there' });
+const listPosts = async (req, res) => {
+  const [err, posts] = await to(Post.find({}));
+
+  if (!err) {
+    res.send(posts);
+    return;
+  }
+
+  res.status(code.SERVER_ERROR).send({
+    error:
+      'There was an error when retrieving posts from the database. Please try again'
+  });
 };
 
-const findPost = (req, res) => {};
+const findPost = async ({ params }, res) => {
+  const post = await Post.findById(params.id);
 
-const addComment = (req, res) => {};
+  if (post) {
+    res.send(post);
+    return;
+  }
+
+  res
+    .status(code.USER_ERROR)
+    .send({ error: 'ID is invalid. Please search for another blog post' });
+};
+
+const addComment = async (req, res) => {
+  const [err, comment] = await to(Comment.create(req.body));
+
+  if (err) {
+    res
+      .status(code.USER_ERROR)
+      .send({ error: "Sorry, you can't leave a blank comment." });
+    return;
+  }
+
+  const result = await Comment.findOne({ _id: comment._id }).populate(
+    '_parent'
+  );
+
+  res.status(code.CREATED).send(result);
+};
 
 // In this function, we need to delete the comment document
 // We also need to delete the comment's parent post's reference
