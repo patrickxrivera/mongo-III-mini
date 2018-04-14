@@ -73,13 +73,13 @@ const addComment = async (req, res) => {
 // In this function, we need to delete the comment document
 // We also need to delete the comment's parent post's reference
 // to the comment we just deleted
-const removeComment = R.curry(({ _id }, c) => !_id.equals(c));
+const isTargetComment = R.curry(({ _id }, c) => !_id.equals(c));
 
 const deleteComment = async ({ params: { commentId, id } }, res) => {
   const comment = await Comment.findByIdAndRemove(commentId);
 
   const post = await Post.findById(id);
-  post.comments = R.filter(removeComment(comment), post.comments);
+  post.comments = R.filter(isTargetComment(comment), post.comments);
 
   await post.save();
 
@@ -95,7 +95,6 @@ const deletePost = async ({ params: { id } }, res) => {
   const post = await Post.findById(id);
 
   await Promise.all(R.map(purgeComment, post.comments));
-  const test = await Comment.find({});
 
   await Post.remove({ _id: id });
 
